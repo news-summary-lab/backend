@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>연습문제 7</title>
+<style type="text/css">
+	@keyframes ani{
+		0%{background-color:orange;}
+		25%{background-color:yellow; transform:translateX(700px);}
+		50%{background-color:green; transform:translate(700px,500px);}
+		75%{background-color:blue; transform:translate(0%,500px);}
+		100%{background-color:orange;}
+	}
+	div{
+		animation-name : ani; 
+		animation-duration : 5s;
+		animation-iteration-count : infinite;
+		position:absolute;
+		width:100px;
+		height:100px;
+		text-align:center;
+	}
+</style>
+</head>
+<body>
+<div><p style="margin-top:33px">Animation</div>
+</body>
+</html>
