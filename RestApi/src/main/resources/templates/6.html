@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>연습문제 6</title>
+<style>
+	td{
+		width:30px;
+		height:30px
+	}
+</style>
+</head>
+<body>
+<script>
+	var row=prompt("행을 입력하세요");
+	var col=prompt("열을 입력하세요");
+	if(isFinite(row) && row>0 && isFinite(col) && col>0){
+		document.write("<table border='1'>");
+		document.write("<tbody>");
+		for(var i=0;i<row;i++){
+			document.write("<tr>");
+			for(var j=0;j<col;j++){
+				document.write("<td></td>");
+			}
+			document.write("</tr>");
+		}
+		document.write("</tbody>");
+		document.write("</table>");	
+	}
+	else{
+		document.write("정수를 입력하세요");
+	}
+</script>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>News Summarizer</title>
+</head>
+<body>
+    <h2>Conversation:</h2>
+    <ul id="conversation"></ul>
+    <h2>Summary:</h2>
+    <p id="summary"></p>
+    
+    <h1>News Summarizer</h1>
+    <textarea id="articleText" rows="10" cols="50" placeholder="Enter your article text here..."></textarea><br>
+    <button onclick="sendArticle()">Summarize</button>
+    
+
+<script>
+let conversation = [];
+
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        const res = await fetch('/api/summaries/history');
+        const json = await res.json();
+        console.log("대화 기록 응답:", json);
+        conversation = Array.isArray(json) ? json : [];
+        updateConversation();
+    } catch (err) {
+        console.error("대화 불러오기 실패", err);
+    }
+});
+
+async function sendArticle() {
+    const articleText = document.getElementById('articleText').value;
+    document.getElementById('articleText').value = '';
+
+    try {
+        const response = await fetch('/api/summaries', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: articleText })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || '요약 요청 중 오류 발생');
+        }
+
+        // 바로 대화창에 반영
+        conversation.push({ prompt: data.original, response: data.summary });
+        updateConversation();
+    } catch (error) {
+        document.getElementById('summary').innerText = 'Error: ' + error.message;
+    }
+}
+
+function updateConversation() {
+    const conversationList = document.getElementById('conversation');
+    conversationList.innerHTML = '';
+
+    conversation.forEach(entry => {
+        const liQ = document.createElement('li');
+        liQ.innerText = "Q: " + entry.prompt;
+        const liA = document.createElement('li');
+        liA.innerText = "A: " + entry.response;
+        conversationList.appendChild(liQ);
+        conversationList.appendChild(liA);
+    });
+}   
+</script>
+</body>
+</html>
