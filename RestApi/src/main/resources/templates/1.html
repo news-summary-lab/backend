@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>연습문제 1</title>
+</head>
+<body>
+<h3>월화수목금토일</h3>
+<hr>
+<script>
+	var a;
+	var day=prompt("월화수목금토일 중에서 입력하세요.");
+	if(day=="월"||day=="화"||day=="수"||day=="목"||day=="금")
+		a="학교";
+	else if(day=="토"||day=="일")
+		a="쉬는날";
+	else{
+		alert("잘못된 입력");
+		location.reload(true);
+	}
+	document.write(day+"요일은 "+a+"!");
+</script>
+</body>
+</html>
