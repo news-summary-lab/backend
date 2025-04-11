@@ -3,22 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <title>연습문제 1</title>
+<style>
+	div{
+		display:inline-block;
+		width:200px;
+		height:auto;
+		border:2px solid green;
+	}
+</style>
 </head>
 <body>
-<h3>월화수목금토일</h3>
+<h3>3 개의 div 활용</h3>
 <hr>
-<script>
-	var a;
-	var day=prompt("월화수목금토일 중에서 입력하세요.");
-	if(day=="월"||day=="화"||day=="수"||day=="목"||day=="금")
-		a="학교";
-	else if(day=="토"||day=="일")
-		a="쉬는날";
-	else{
-		alert("잘못된 입력");
-		location.reload(true);
-	}
-	document.write(day+"요일은 "+a+"!");
-</script>
+<div>
+캔버스에 이미지를 그리기 위해서는 이미지를 담을 객체가 먼저 필요하다.
+</div>
+<div>
+Image 객체의 src 프로피터를 이용하여 비트맵을 로드한다.
+</div>
+<div>
+이미지 로딩이 끝나면 그때 비로소 이미지의 너비와 높이가 제대로 알려진다.
+</div>
 </body>
 </html>

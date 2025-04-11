@@ -3,27 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <title>연습문제 4</title>
+<style>
+	img{
+		width:300px; height:450px;
+		transition:width 2s;
+	}
+	img:hover{
+		width:100%;
+	}
+</style>
 </head>
 <body>
-<h3>큰 자리수와 낮은자리수 같은지 비교</h3>
+<h3>마우스를 올려봐요</h3>
 <hr>
-<script>
-	var a=prompt("숫자 입력");
-	if(isFinite(a)&&a>0){
-		var n=parseInt(a);
-		var last=n%10;
-		var first=0;
-		while(n!=0){
-			first=n%10;
-			n=Math.floor(n/10);
-		}
-		if(first==last)
-			document.write(a+":같음");
-		else
-			document.write(a+":다름");
-	}
-	else
-		document.write("입력오류");
-</script>
+<img src="카드_앞.png">
 </body>
 </html>
