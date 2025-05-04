@@ -7,6 +7,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 public class ViewController {
     @GetMapping("/summarize")
     public String index() {
-        return "summarize";  // Thymeleaf 템플릿 반환
+        return "summarize";  
+    }
+    @GetMapping("/test")
+    public String test() {
+    	return "test";
     }
 }
