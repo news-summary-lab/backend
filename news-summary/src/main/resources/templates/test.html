@@ -499,33 +499,30 @@
     
     <script>
         const state = {
-            apiKey: '', //여기에 api키 입력
             sendingMessage: false,
             typingIndicator: null,
             messages: [],
             hasConversationStarted: false
         };
-        
+
         // 현재 날짜 표시
         function displayDate() {
             const date = new Date();
             const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
             document.getElementById('date-display').textContent = date.toLocaleDateString('ko-KR', options);
         }
-        
+
         // 텍스트 영역 자동 높이 조절
         function autoResizeTextarea() {
             const textarea = document.getElementById('articleText');
             textarea.addEventListener('input', function() {
                 this.style.height = 'auto';
                 this.style.height = (this.scrollHeight) + 'px';
-                // 최대 높이 제한
                 if (this.scrollHeight > 200) {
                     this.style.height = '200px';
                 }
             });
             
-            // 포커스 이벤트 추가
             textarea.addEventListener('focus', function() {
                 this.parentElement.classList.add('focused');
             });
@@ -533,8 +530,15 @@
             textarea.addEventListener('blur', function() {
                 this.parentElement.classList.remove('focused');
             });
+
+            textarea.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendArticle();
+                }
+            });
         }
-        
+
         // 메시지 추가 함수
         function addMessage(isUser, content) {
             const chatView = document.getElementById('chat-view');
@@ -580,14 +584,14 @@
                     behavior: 'smooth'
                 });
             }, 200);
-    
+
             // 상태 업데이트
             state.messages.push({
                 content: content,
                 isUser: isUser
             });
         }
-        
+
         // 타이핑 인디케이터 표시 함수
         function showTypingIndicator() {
             const chatView = document.getElementById('chat-view');
@@ -613,7 +617,7 @@
             
             return typingDiv;
         }
-         
+        
         // 초기 화면으로 돌아가는 함수
         function resetToWelcomeScreen() {
             const chatView = document.getElementById('chat-view');
@@ -642,7 +646,7 @@
                 }, 100);
             }, 300);
         }
-        
+
         // 태그 클릭 이벤트 처리
         function setupTagEvents() {
             const tags = document.querySelectorAll('.tag');
@@ -650,19 +654,17 @@
                 tag.addEventListener('click', function() {
                     const query = this.textContent;
                     document.getElementById('articleText').value = query;
-                    handleSendMessage();
+                    sendArticle();
                 });
             });
         }
-        
+
         // 카테고리 클릭 이벤트 처리
         function setupCategoryEvents() {
             const categories = document.querySelectorAll('.category-chip');
             categories.forEach(category => {
                 category.addEventListener('click', function() {
-                    // 현재 활성화된 카테고리 비활성화
                     document.querySelector('.category-chip.active').classList.remove('active');
-                    // 클릭한 카테고리 활성화
                     this.classList.add('active');
                 });
             });
@@ -670,28 +672,36 @@
 
         let conversation = [];
 
-        document.addEventListener("DOMContentLoaded", async () => {
+        document.addEventListener('DOMContentLoaded', async () => {
+            displayDate();
+            autoResizeTextarea();
+            setupTagEvents();
+            setupCategoryEvents();
+            
+            document.getElementById('title-home').addEventListener('click', resetToWelcomeScreen);
+            
             try {
-                const response = await fetch("/api/summaries/history");
-                if (response.ok) {
-                    const history = await response.json();
-                    console.log("History loaded:", history);
-
-                    history.forEach(message => {
-                        addMessage(message.role, message.content);
-                    });
-                } else {
-                    console.error("Failed to fetch history:", response.status);
-                }
-            } catch (error) {
-                console.error("Error fetching history:", error);
+                const res = await fetch('/api/summaries/history');
+                const json = await res.json();
+                console.log("대화 기록 응답:", json);
+                conversation = Array.isArray(json) ? json : [];
+                updateConversation();
+            } catch (err) {
+                console.error("대화 불러오기 실패", err);
             }
         });
-
+        
         async function sendArticle() {
             const articleText = document.getElementById('articleText').value;
+            if (!articleText.trim()) return;
+            
+            // 사용자 메시지 표시
+            addMessage(true, articleText);
             document.getElementById('articleText').value = '';
-
+            document.getElementById('articleText').style.height = 'auto';
+            
+            const typingIndicator = showTypingIndicator();
+            
             try {
                 const response = await fetch('/api/summaries', {
                     method: 'POST',
@@ -702,42 +712,33 @@
                 const data = await response.json();
                 console.log("요약 응답:", data);
 
+                if (typingIndicator && typingIndicator.parentNode) {
+                    typingIndicator.parentNode.removeChild(typingIndicator);
+                }
+
                 if (!response.ok) {
                     throw new Error(data.message || '요약 요청 중 오류 발생');
                 }
 
-                // 여기에 원본 기사 직접 넣어줌
                 conversation.push({ prompt: articleText, response: data.summary });
-                updateConversation();
+                
+                // 봇 응답 메시지 표시
+                addMessage(false, data.summary);
             } catch (error) {
-                document.getElementById('summary').innerText = 'Error: ' + error.message;
+                console.error('Error:', error);
+                
+                if (typingIndicator && typingIndicator.parentNode) {
+                    typingIndicator.parentNode.removeChild(typingIndicator);
+                }
+                
+                addMessage(false, '요약 중 오류가 발생했습니다: ' + error.message);
             }
         }
 
         function updateConversation() {
-            const container = document.getElementById('chat-view');
-            if (!container) return;
-            container.innerHTML = '';
-
             conversation.forEach(entry => {
-                const promptBox = document.createElement('div');
-                promptBox.className = 'message user-message';
-                promptBox.innerHTML = `
-                    <div class="message-text">
-                        <p>${entry.prompt}</p>
-                    </div>
-                `;
-
-                const responseBox = document.createElement('div');
-                responseBox.className = 'message ai-message';
-                responseBox.innerHTML = `
-                    <div class="message-text">
-                        <p>${entry.response}</p>
-                    </div>
-                `;
-
-                container.appendChild(promptBox);
-                container.appendChild(responseBox);
+                addMessage(true, entry.prompt);
+                addMessage(false, entry.response);
             });
         }
     </script>
