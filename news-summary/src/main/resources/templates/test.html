@@ -487,7 +487,7 @@
             </div>
         </div>
 
-        <div id="chat-viewchat-view" class="chat-container" style="display: none;"></div>
+        <div id="chat-view" class="chat-container" style="display: none;"></div>
         
         <div id="input-container" class="input-container center-input" contenteditable="true">
             <textarea id="articleText" class="articleText" placeholder="뉴스 주제나 URL을 입력하세요..." rows="1"></textarea>
@@ -536,7 +536,7 @@
         }
         
         // 메시지 추가 함수
-        function addMessage(content, isUser) {
+        function addMessage(isUser, content) {
             const chatView = document.getElementById('chat-view');
             const welcomeView = document.getElementById('welcome-view');
             const inputContainer = document.getElementById('input-container');
@@ -715,13 +715,13 @@
         }
 
         function updateConversation() {
-            const container = document.getElementById('chat-viewchat-view');
+            const container = document.getElementById('chat-view');
             if (!container) return;
             container.innerHTML = '';
 
             conversation.forEach(entry => {
                 const promptBox = document.createElement('div');
-                promptBox.className = 'message user-message'; // 사용자 메시지 스타일
+                promptBox.className = 'message user-message';
                 promptBox.innerHTML = `
                     <div class="message-text">
                         <p>${entry.prompt}</p>
@@ -729,7 +729,7 @@
                 `;
 
                 const responseBox = document.createElement('div');
-                responseBox.className = 'message ai-message'; // AI 응답 스타일
+                responseBox.className = 'message ai-message';
                 responseBox.innerHTML = `
                     <div class="message-text">
                         <p>${entry.response}</p>

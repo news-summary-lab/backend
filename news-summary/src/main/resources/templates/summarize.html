@@ -22,7 +22,7 @@ let conversation = [];
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         const res = await fetch('/api/summaries/history');
-        const jxson = await res.json();
+        const json = await res.json();
         console.log("대화 기록 응답:", json);
         conversation = Array.isArray(json) ? json : [];
         updateConversation();
