@@ -456,6 +456,9 @@
         <h1 id="title-home"><i class="fas fa-newspaper"></i> 뉴스 요약 봇</h1>
         <div class="header-right">
             <span id="date-display"></span>
+            <a sec:authorize="isAnonymous()" th:href="@{/login_signin}">로그인/회원가입</a>
+            <a sec:authorize="isAuthenticated()" th:href="@{/logout}">로그아웃</a>
+            
         </div>
     </header>
     

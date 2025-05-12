@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+</head>
+<script th:inline="javascript">
+	alert("아이디나 비밀번호가 일치하지 않습니다.");
+	localStorage.removeItem("email");
+	location.href = "/login_signin";
+</script>
+</html>
