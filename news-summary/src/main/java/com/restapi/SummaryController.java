@@ -23,7 +23,7 @@ public class SummaryController {
         if (article.getText() == null || article.getText().isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("message", "프롬프트를 입력하세요."));
         }
-
+        
         String summary = summaryService.summarize(article);
         return ResponseEntity.ok(Map.of("original", article.getText(), "summary", summary));
     }

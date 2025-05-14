@@ -3,6 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <meta name="_csrf" th:content="${_csrf.token}" />
+	<meta name="_csrf_header" th:content="${_csrf.headerName}" />
+	
     <title>뉴스 요약 봇</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -697,18 +701,25 @@
         async function sendArticle() {
             const articleText = document.getElementById('articleText').value;
             if (!articleText.trim()) return;
-            
-            // 사용자 메시지 표시
+
             addMessage(true, articleText);
             document.getElementById('articleText').value = '';
             document.getElementById('articleText').style.height = 'auto';
-            
+
             const typingIndicator = showTypingIndicator();
-            
+
             try {
+                // 🔐 CSRF 토큰 헤더 셋팅
+                const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+                const csrfHeader = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
+
                 const response = await fetch('/api/summaries', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        [csrfHeader]: csrfToken
+                    },
+                    credentials: 'include',
                     body: JSON.stringify({ text: articleText })
                 });
 
@@ -724,19 +735,16 @@
                 }
 
                 conversation.push({ prompt: articleText, response: data.summary });
-                
-                // 봇 응답 메시지 표시
                 addMessage(false, data.summary);
             } catch (error) {
                 console.error('Error:', error);
-                
                 if (typingIndicator && typingIndicator.parentNode) {
                     typingIndicator.parentNode.removeChild(typingIndicator);
                 }
-                
                 addMessage(false, '요약 중 오류가 발생했습니다: ' + error.message);
             }
         }
+
 
         function updateConversation() {
             conversation.forEach(entry => {
