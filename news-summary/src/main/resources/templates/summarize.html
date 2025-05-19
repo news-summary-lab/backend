@@ -460,6 +460,8 @@
         <h1 id="title-home"><i class="fas fa-newspaper"></i> 뉴스 요약 봇</h1>
         <div class="header-right">
             <span id="date-display"></span>
+            <a sec:authorize="isAnonymous()" th:href="@{/login_signin}">로그인/회원가입</a>
+            <a sec:authorize="isAuthenticated()" th:href="@{/logout}">로그아웃</a>
         </div>
     </header>
     
@@ -683,21 +685,27 @@
             autoResizeTextarea();
             setupTagEvents();
             setupCategoryEvents();
-            
             document.getElementById('title-home').addEventListener('click', resetToWelcomeScreen);
-            
             addCustomStyles();
 
             try {
                 const res = await fetch('/api/summaries/history');
+                if (!res.ok) throw new Error();
                 const json = await res.json();
-                console.log("대화 기록 응답:", json);
                 conversation = Array.isArray(json) ? json : [];
-                updateConversation();
             } catch (err) {
-                console.error("대화 불러오기 실패", err);
+                // 비회원일 경우 localStorage에서 로딩
+                const local = localStorage.getItem("guestConversation");
+                if (local) {
+                    conversation = JSON.parse(local);
+                } else {
+                    conversation = [];
+                }
             }
+
+            updateConversation();
         });
+
 
         function addCustomStyles() {
             const style = document.createElement('style');
@@ -750,7 +758,12 @@
                     throw new Error(data.message || '요약 요청 중 오류 발생');
                 }
 
+               
                 conversation.push({ prompt: articleText, response: data.summary });
+                
+                if (!isLoggedIn()) {
+                      localStorage.setItem("guestConversation", JSON.stringify(conversation));
+                }
 
                 let summary = data.summary;
 
@@ -787,6 +800,15 @@
                 addMessage(false, entry.response);
             });
         }
+        
+
+        function isLoggedIn() {
+          // 서버에서 사용자 정보를 가져오는 API가 있다면 그 결과를 기반으로 판단
+          // 예: /api/userinfo 호출 결과가 guest가 아니면 로그인 상태
+          const userInfo = localStorage.getItem("userInfo");
+          return userInfo && JSON.parse(userInfo).id;
+        }
+
     </script>
 </body>
 </html>

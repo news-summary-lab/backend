@@ -23,10 +23,10 @@ public class SecurityConfig {
             .formLogin((formLogin) -> formLogin
                     .loginPage("/login_signin")
                     .usernameParameter("email")
-                    .defaultSuccessUrl("/test"))
+                    .defaultSuccessUrl("/summarize"))
             .logout((logout) -> logout
                     .logoutRequestMatcher(new AntPathRequestMatcher("/logout"))
-                    .logoutSuccessUrl("/test")
+                    .logoutSuccessUrl("/summarize")
                     .invalidateHttpSession(true));
         
         return http.build();

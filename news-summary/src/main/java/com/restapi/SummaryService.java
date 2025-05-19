@@ -18,17 +18,35 @@ public class SummaryService {
 	private final RestTemplate restTemplate = new RestTemplate();
 	private final RedisTemplate<String, Conversation> redisTemplate;
   
-	public String summarize(Article article) { 
+	public String summarize(Article article, Integer userId) { 
 		String fastApiUrl = "http://localhost:8000/summarize";
 		String summary = restTemplate.postForObject(fastApiUrl, article, String.class);
-		Conversation conv = new Conversation(article.getText(), summary);
-        redisTemplate.opsForList().rightPush("conversation", conv);
+		
+		/*
+		 * String key = getRedisKey(userId); Conversation conv = new
+		 * Conversation(article.getText(), summary);
+		 * redisTemplate.opsForList().rightPush(key, conv);
+		 */
+		
+		if (userId != null) {
+	        String key = "conversation:user:" + userId;
+	        Conversation conv = new Conversation(article.getText(), summary);
+	        redisTemplate.opsForList().rightPush(key, conv);
+	    }
 		
 		return summary; 
 	  }
 	
-	public List<Conversation> getConversationHistory() {
-	    return redisTemplate.opsForList().range("conversation", 0, -1);
+	public List<Conversation> getConversationHistory(Integer userId) {
+		String key = new String();
+		if(userId!=null) {
+			key="conversation:user:" + userId;
+			return redisTemplate.opsForList().range(key, 0, -1);
+		}
+		else {
+			return null;
+		}
 	}
+	
   }
  
