@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <meta name="_csrf" th:content="${_csrf.token}" />
+	<meta name="_csrf_header" th:content="${_csrf.headerName}" />
+	
+    <title>뉴스 요약 봇</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+	<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+        
+        :root {
+            --bg-primary: #121212;
+            --bg-secondary: #1e1e1e;
+            --bg-tertiary: #2d2d2d;
+            --text-primary: #ffffff;
+            --text-secondary: #e0e0e0;
+            --text-tertiary: #a0a0a0;
+            --accent-primary: #00b0ff;
+            --accent-secondary: #64ffda;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        
+		
+		
+		
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: var(--transition);
+        }
+        
+        .header {
+            padding: 1rem 2rem;
+            background-color: var(--bg-secondary);
+            box-shadow: var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: var(--transition);
+            z-index: 100;
+        }
+        
+        .header h1 {
+            font-size: 1.5rem;
+            color: var(--accent-primary);
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+        
+        .header h1 i {
+            margin-right: 0.5rem;
+            font-size: 1.8rem;
+        }
+        
+        .header h1:hover {
+            transform: translateY(-2px);
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+            color: var(--text-tertiary);
+        }
+        
+        .main-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 1rem;
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            height: calc(100vh - 70px);
+            position: relative;
+            transition: var(--transition);
+        }
+        
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            scrollbar-width: thin;
+            scrollbar-color: var(--accent-primary) var(--bg-secondary);
+            transition: var(--transition);
+        }
+        
+        .chat-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .chat-container::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+        
+        .chat-container::-webkit-scrollbar-thumb {
+            background-color: var(--accent-primary);
+            border-radius: 3px;
+        }
+        
+        .welcome-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 0 2rem;
+            transition: var(--transition);
+            animation: fadeIn 1s ease;
+        }
+        
+        .welcome-logo {
+            font-size: 3.5rem;
+            color: var(--accent-primary);
+            margin-bottom: 1.5rem;
+            animation: pulse 3s infinite alternate;
+        }
+        
+        .welcome-title {
+            font-size: 2.2rem;
+            margin-bottom: 5rem;
+            color: var(--accent-primary);
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        
+        .welcome-subtitle {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            margin-top: 1rem;
+            line-height: 1.6;
+            max-width: 600px;
+        }
+        
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 2rem;
+            gap: 0.5rem;
+        }
+        
+        .tag {
+            background-color: var(--bg-tertiary);
+            color: var(--text-secondary);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: var(--transition);
+            transform: scale(0.95);
+            animation: fadeInUp 0.6s calc(var(--delay) * 0.1s) both;
+        }
+        
+        .tag:hover {
+            background-color: var(--accent-primary);
+            color: var(--bg-primary);
+            transform: scale(1.05);
+        }
+        
+        .input-container {
+            display: flex;
+            margin-top: auto;
+            position: relative;
+            transition: var(--transition);
+        }
+        
+        .center-input {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .articleText {
+            flex: 1;
+            padding: 1rem 3rem 1rem 1rem;
+            border: 1px solid var(--bg-tertiary);
+            border-radius: 12px;
+            font-size: 1rem;
+            outline: none;
+            color: var(--text-primary);
+            background-color: var(--bg-secondary);
+            box-shadow: var(--shadow);
+            resize: none;
+            min-height: 56px;
+            max-height: 200px;
+            transition: var(--transition);
+            overflow: hidden;
+        }
+        
+        .articleText::placeholder {
+            color: var(--text-tertiary);
+        }
+        
+        .articleText:focus {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 2px rgba(0, 176, 255, 0.2);
+        }
+        
+        .send-button {
+            position: absolute;
+            right: 10px;
+            bottom: 10px;
+            background-color: var(--accent-primary);
+            color: var(--bg-primary);
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        
+        .send-button:hover {
+            background-color: var(--accent-secondary);
+            transform: rotate(15deg) scale(1.1);
+        }
+        
+        .message {
+            display: flex;
+            margin-bottom: 1.5rem;
+            position: relative;
+            animation: slideIn 0.5s ease-out forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        
+        .message-content {
+            padding: 1rem;
+            border-radius: 12px;
+            max-width: 80%;
+            line-height: 1.5;
+            transition: var(--transition);
+        }
+        
+        .user-message {
+            justify-content: flex-end;
+        }
+        
+        .bot-message {
+            justify-content: flex-start;
+        }
+        
+        .user-message .message-content {
+            background-color: var(--accent-primary);
+            color: var(--bg-primary);
+            box-shadow: var(--shadow);
+        }
+        
+        .bot-message .message-content {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            box-shadow: var(--shadow);
+        }
+        
+        .user-message .message-content:hover,
+        .bot-message .message-content:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+        }
+        
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--bg-primary);
+            font-weight: bold;
+            animation: scaleIn 0.3s ease;
+        }
+        
+        .bot-avatar {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            box-shadow: var(--shadow);
+        }
+        
+        .typing-indicator {
+            display: flex;
+            padding: 0.5rem 1rem;
+            border-radius: 12px;
+            background-color: var(--bg-tertiary);
+            width: fit-content;
+        }
+        
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            margin: 2px 2px;
+            border-radius: 50%;
+            background-color: var(--accent-primary);
+            display: inline-block;
+            animation: typingDot 1.5s infinite ease-in-out both;
+        }
+        
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        .category-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            padding: 0.5rem 0;
+            transition: var(--transition);
+        }
+        
+        .category-chip {
+            background-color: var(--bg-tertiary);
+            color: var(--text-secondary);
+            padding: 0.3rem 0.8rem;
+            border-radius: 16px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: var(--transition);
+            animation: fadeInRight 0.5s calc(var(--delay) * 0.1s) both;
+        }
+        
+        .category-chip:hover {
+            background-color: var(--accent-primary);
+            color: var(--bg-primary);
+            transform: translateY(-2px);
+        }
+        
+        .category-chip.active {
+            background-color: var(--accent-primary);
+            color: var(--bg-primary);
+        }
+        
+        /* 애니메이션 */
+        @keyframes slideIn {
+            0% {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes fadeIn {
+            0% {
+                opacity: 0;
+            }
+            100% {
+                opacity: 1;
+            }
+        }
+        
+        @keyframes fadeInUp {
+            0% {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes fadeInRight {
+            0% {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                text-shadow: 0 0 10px rgba(0, 176, 255, 0.5);
+            }
+            100% {
+                transform: scale(1.05);
+                text-shadow: 0 0 20px rgba(0, 176, 255, 0.8);
+            }
+        }
+        
+        @keyframes scaleIn {
+            0% {
+                transform: scale(0);
+            }
+            70% {
+                transform: scale(1.1);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+        
+        @keyframes typingDot {
+            0%, 20%, 100% {
+                transform: translateY(0);
+                opacity: 0.5;
+            }
+            50% {
+                transform: translateY(-5px);
+                opacity: 1;
+            }
+        }
+        
+        /* 반응형 디자인 */
+        @media (max-width: 768px) {
+            .header {
+                padding: 0.8rem 1rem;
+            }
+            
+            .main-container {
+                padding: 0.5rem;
+            }
+            
+            .message-content {
+                max-width: 90%;
+            }
+            
+            .welcome-title {
+                font-size: 1.8rem;
+            }
+            
+            .welcome-logo {
+                font-size: 3rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1 id="title-home"><i class="fas fa-newspaper"></i> 뉴스 요약 봇</h1>
+        <div class="header-right">
+            <span id="date-display"></span>
+        </div>
+    </header>
+    
+    <div class="main-container">
+        <div id="category-container" class="category-chips" style="display: none;">
+            <div class="category-chip active" style="--delay: 1;">전체</div>
+            <div class="category-chip" style="--delay: 2;">정치</div>
+            <div class="category-chip" style="--delay: 3;">경제</div>
+            <div class="category-chip" style="--delay: 4;">사회</div>
+            <div class="category-chip" style="--delay: 5;">국제</div>
+            <div class="category-chip" style="--delay: 6;">기술</div>
+            <div class="category-chip" style="--delay: 7;">문화</div>
+        </div>
+        
+        <div id="welcome-view" class="welcome-container">
+            <div class="welcome-logo">
+                <i class="fas fa-newspaper"></i>
+            </div>
+            <h2 class="welcome-title">뉴스 요약 봇</h2>
+            <p class="welcome-subtitle">궁금한 뉴스나 주제를 입력하시면 AI가 빠르게 요약해 드립니다.<br>최신 이슈를 간편하게 파악하세요.</p>
+            
+            <div class="tags-container">
+                <div class="tag" style="--delay: 1;">대선 결과</div>
+                <div class="tag" style="--delay: 2;">최신 경제 동향</div>
+                <div class="tag" style="--delay: 3;">코로나19 현황</div>
+                <div class="tag" style="--delay: 4;">기후 변화</div>
+                <div class="tag" style="--delay: 5;">테크 트렌드</div>
+                <div class="tag" style="--delay: 6;">글로벌 이슈</div>
+            </div>
+        </div>
+
+        <div id="chat-view" class="chat-container" style="display: none;"></div>
+        
+        <div id="input-container" class="input-container center-input" contenteditable="true">
+            <textarea id="articleText" class="articleText" placeholder="뉴스 주제나 URL을 입력하세요..." rows="1"></textarea>
+            <button id="send-button" class="send-button" onclick="sendArticle()">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+    
+    <script>
+        const state = {
+            sendingMessage: false,
+            typingIndicator: null,
+            messages: [],
+            hasConversationStarted: false
+        };
+
+        // 현재 날짜 표시
+        function displayDate() {
+            const date = new Date();
+            const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+            document.getElementById('date-display').textContent = date.toLocaleDateString('ko-KR', options);
+        }
+
+        // 텍스트 영역 자동 높이 조절
+        function autoResizeTextarea() {
+            const textarea = document.getElementById('articleText');
+            textarea.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+                if (this.scrollHeight > 200) {
+                    this.style.height = '200px';
+                }
+            });
+            
+            textarea.addEventListener('focus', function() {
+                this.parentElement.classList.add('focused');
+            });
+            
+            textarea.addEventListener('blur', function() {
+                this.parentElement.classList.remove('focused');
+            });
+
+            textarea.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendArticle();
+                }
+            });
+        }
+
+        // 메시지 추가 함수
+        function addMessage(isUser, content, isFollowUp = false) {
+            const chatView = document.getElementById('chat-view');
+            const welcomeView = document.getElementById('welcome-view');
+            const inputContainer = document.getElementById('input-container');
+            const categoryContainer = document.getElementById('category-container');
+            
+            // 첫 메시지면 환영 화면 숨기고 채팅 화면 표시
+            if (chatView.style.display === 'none') {
+                welcomeView.style.display = 'none';
+                chatView.style.display = 'flex';
+                categoryContainer.style.display = 'flex';
+                inputContainer.classList.remove('center-input');
+                state.hasConversationStarted = true;
+            }
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+            
+            if (!isUser && !isFollowUp) {
+                const avatar = document.createElement('div');
+                avatar.className = 'avatar bot-avatar';
+                avatar.innerHTML = '<i class="fas fa-robot"></i>';
+                messageDiv.appendChild(avatar);
+            } else if (!isUser && isFollowUp) {
+                messageDiv.style.marginLeft = '52px';
+            }
+            
+            const messageContent = document.createElement('div');
+            messageContent.className = 'message-content';
+			if (isUser) {
+						             messageContent.textContent = content;
+						         } else {
+						             // ✅ 마크다운 렌더링 적용
+						             messageContent.innerHTML = marked.parse(content);
+						         }
+            messageDiv.appendChild(messageContent);
+            
+            chatView.appendChild(messageDiv);
+            
+            // 지연 후 애니메이션 시작
+            setTimeout(() => {
+                messageDiv.style.animation = 'slideIn 0.5s ease-out forwards';
+            }, 100);
+            
+            // 스크롤 부드럽게 아래로 이동
+            setTimeout(() => {
+                chatView.scrollTo({
+                    top: chatView.scrollHeight,
+                    behavior: 'smooth'
+                });
+            }, 200);
+
+            // 상태 업데이트
+            state.messages.push({
+                content: content,
+                isUser: isUser
+            });
+        }
+
+        // 타이핑 인디케이터 표시 함수
+        function showTypingIndicator() {
+            const chatView = document.getElementById('chat-view');
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'message bot-message';
+            typingDiv.id = 'typing-indicator';
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'avatar bot-avatar';
+            avatar.innerHTML = '<i class="fas fa-robot"></i>';
+            typingDiv.appendChild(avatar);
+            
+            const typingContent = document.createElement('div');
+            typingContent.className = 'typing-indicator';
+            typingContent.innerHTML = '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
+            typingDiv.appendChild(typingContent);
+            
+            chatView.appendChild(typingDiv);
+            chatView.scrollTo({
+                top: chatView.scrollHeight,
+                behavior: 'smooth'
+            });
+            
+            return typingDiv;
+        }
+        
+        // 초기 화면으로 돌아가는 함수
+        function resetToWelcomeScreen() {
+            const chatView = document.getElementById('chat-view');
+            const welcomeView = document.getElementById('welcome-view');
+            const inputContainer = document.getElementById('input-container');
+            const categoryContainer = document.getElementById('category-container');
+            
+            // 애니메이션 효과로 전환
+            chatView.style.opacity = 0;
+            
+            setTimeout(() => {
+                // 채팅 화면 숨기고 환영 화면 표시
+                chatView.style.display = 'none';
+                categoryContainer.style.display = 'none';
+                welcomeView.style.display = 'flex';
+                welcomeView.style.opacity = 0;
+                
+                setTimeout(() => {
+                    welcomeView.style.opacity = 1;
+                    inputContainer.classList.add('center-input');
+                    
+                    // 메시지 기록 초기화
+                    chatView.innerHTML = '';
+                    state.messages = [];
+                    state.hasConversationStarted = false;
+                }, 100);
+            }, 300);
+        }
+
+        // 태그 클릭 이벤트 처리
+        function setupTagEvents() {
+            const tags = document.querySelectorAll('.tag');
+            tags.forEach(tag => {
+                tag.addEventListener('click', function() {
+                    const query = this.textContent;
+                    document.getElementById('articleText').value = query;
+                    sendArticle();
+                });
+            });
+        }
+
+        // 카테고리 클릭 이벤트 처리
+        function setupCategoryEvents() {
+            const categories = document.querySelectorAll('.category-chip');
+            categories.forEach(category => {
+                category.addEventListener('click', function() {
+                    document.querySelector('.category-chip.active').classList.remove('active');
+                    this.classList.add('active');
+                });
+            });
+        }
+
+        let conversation = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            displayDate();
+            autoResizeTextarea();
+            setupTagEvents();
+            setupCategoryEvents();
+            
+            document.getElementById('title-home').addEventListener('click', resetToWelcomeScreen);
+            
+            addCustomStyles();
+
+            try {
+                const res = await fetch('/api/summaries/history');
+                const json = await res.json();
+                console.log("대화 기록 응답:", json);
+                conversation = Array.isArray(json) ? json : [];
+                updateConversation();
+            } catch (err) {
+                console.error("대화 불러오기 실패", err);
+            }
+        });
+
+        function addCustomStyles() {
+            const style = document.createElement('style');
+            style.textContent = `
+                .message {
+                    margin-bottom: 0.5rem; /* 메시지 간격 줄이기 (원래 1.5rem) */
+                }
+                
+                .bot-message + .bot-message {
+                    margin-top: -0.3rem; /* 연속된 봇 메시지 간 더 좁은 간격 */
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+		async function sendArticle() {
+		    const articleText = document.getElementById('articleText').value;
+		    if (!articleText.trim()) return;
+
+		    // 사용자 메시지 표시
+		    addMessage(true, articleText);
+		    document.getElementById('articleText').value = '';
+		    document.getElementById('articleText').style.height = 'auto';
+
+		    const typingIndicator = showTypingIndicator();
+
+		    try {
+		        const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+		        const csrfHeader = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
+
+		        const response = await fetch('/api/summaries', {
+		            method: 'POST',
+		            headers: {
+		                'Content-Type': 'application/json',
+		                [csrfHeader]: csrfToken
+		            },
+		            body: JSON.stringify({ text: articleText })
+		        });
+
+		        const data = await response.json();
+		        console.log("요약 응답:", data);
+
+		        if (typingIndicator && typingIndicator.parentNode) {
+		            typingIndicator.parentNode.removeChild(typingIndicator);
+		        }
+
+		        if (!response.ok) {
+		            throw new Error(data.message || '요약 요청 중 오류 발생');
+		        }
+
+		        // 대화 기록 저장
+		        conversation.push({ prompt: articleText, response: data.summary });
+
+		        // ✅ 문자열 정리 및 마크다운 파싱
+		        let summary = data.summary || '';
+		        summary = summary.replace(/^"|"$/g, ''); // 양끝 따옴표 제거
+		        const parsed = marked.parse(summary);
+
+		        // ✅ 단락 분리 후 메시지로 추가
+		        const paragraphs = parsed.split(/(?:<br\s*\/?>\s*){2,}|<\/h[1-6]>/i);
+		        paragraphs.forEach((html, index) => {
+		            if (html.trim()) {
+		                addMessage(false, html.trim(), index > 0); // index > 0이면 이어지는 메시지
+		            }
+		        });
+
+		    } catch (error) {
+		        console.error('Error:', error);
+
+		        if (typingIndicator && typingIndicator.parentNode) {
+		            typingIndicator.parentNode.removeChild(typingIndicator);
+		        }
+
+		        addMessage(false, '요약 중 오류가 발생했습니다: ' + error.message);
+		    }
+		}
+
+		function updateConversation() {
+		    conversation.forEach(entry => {
+		        addMessage(true, entry.prompt);
+
+		        // ✅ response 문자열 정리 및 마크다운 파싱
+		        let response = entry.response || '';
+		        response = response.replace(/^"|"$/g, '');
+		        const parsed = marked.parse(response);
+
+		        // ✅ 단락 분리 후 메시지로 추가
+		        const paragraphs = parsed.split(/(?:<br\s*\/?>\s*){2,}|<\/h[1-6]>/i);
+		        paragraphs.forEach((html, index) => {
+		            if (html.trim()) {
+		                addMessage(false, html.trim(), index > 0);
+		            }
+		        });
+		    });
+		}
+    </script>
+</body>
+</html>
