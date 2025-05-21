@@ -214,6 +214,29 @@
             box-shadow: 0 0 0 2px rgba(0, 176, 255, 0.2);
         }
         
+        /* 마이크 버튼 꾸미기 */
+        .mic-button {
+            position: absolute;
+            right: 56px;
+            bottom: 10px;
+            background-color: var(--accent-primary);
+            color: var(--bg-primary);
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        
+        .mic-button:hover {
+            background-color: var(--accent-secondary);
+            transform: rotate(15deg) scale(1.1);
+        }
+        
         .send-button {
             position: absolute;
             right: 10px;
@@ -243,6 +266,12 @@
             animation: slideIn 0.5s ease-out forwards;
             opacity: 0;
             transform: translateY(20px);
+        }
+        
+        /* 디자인 추가 */
+        .message-content-container {
+            display: flex;
+            flex-direction: column;
         }
         
         .message-content {
@@ -285,6 +314,7 @@
             border-radius: 50%;
             margin-right: 12px;
             display: flex;
+            flex-shrink: 0;/* 추가 */
             align-items: center;
             justify-content: center;
             color: var(--bg-primary);
@@ -295,6 +325,11 @@
         .bot-avatar {
             background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
             box-shadow: var(--shadow);
+        }
+        
+        /* 헤드셋 아이콘 변경 */
+        .avatar.bot-avatar:hover .fas.fa-robot::before {
+            content: "\f04b";
         }
         
         .typing-indicator {
@@ -497,6 +532,10 @@
         
         <div id="input-container" class="input-container center-input" contenteditable="true">
             <textarea id="articleText" class="articleText" placeholder="뉴스 주제나 URL을 입력하세요..." rows="1"></textarea>
+            <!-- 마이크 버튼 추가 -->
+            <button id="mic-button" class="mic-button" onclick="speechToText()">
+                <i class="fa-solid fa-microphone"></i>
+            </button>
             <button id="send-button" class="send-button" onclick="sendArticle()">
                 <i class="fas fa-paper-plane"></i>
             </button>
@@ -510,6 +549,45 @@
             messages: [],
             hasConversationStarted: false
         };
+        
+      //STT 구현
+        function speechToText() {
+            const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = 'ko-KR';
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                document.getElementById('articleText').textContent = transcript;
+            };
+            recognition.start();
+        }
+
+        //TTS 구현
+        function textToSpeech(event) {
+            const avatar = event.currentTarget;
+            const messageDiv = avatar.closest('.message.bot-message');
+            if (!messageDiv) return;
+
+            const textDiv = messageDiv.querySelectorAll('.message-content');
+            if (!textDiv) return;
+
+            const texts = [];
+            textDiv.forEach(block => {
+                texts.push(block.textContent.trim());
+            });
+
+            const fullText = texts.join('. ');
+            if(!fullText) return;
+
+            const cleanText = fullText.replace(/[^\p{L}\p{N}\s.,?!]/gu, '');
+            if (!cleanText) return;
+
+            console.log(cleanText);
+            const utterance = new SpeechSynthesisUtterance(cleanText);
+            utterance.lang = 'ko-KR';
+            speechSynthesis.cancel();
+            speechSynthesis.speak(utterance);
+        }
+        
 
         // 현재 날짜 표시
         function displayDate() {
@@ -561,21 +639,33 @@
                 state.hasConversationStarted = true;
             }
             
-            const messageDiv = document.createElement('div');
+            let messageDiv = document.createElement('div');
             messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
-            
+            let messageCC = document.createElement('div');
             if (!isUser && !isFollowUp) {
                 const avatar = document.createElement('div');
                 avatar.className = 'avatar bot-avatar';
                 avatar.innerHTML = '<i class="fas fa-robot"></i>';
+                messageCC.className = 'message-content-container';
+                avatar.addEventListener('click', textToSpeech); //기능 추가
                 messageDiv.appendChild(avatar);
+                messageDiv.appendChild(messageCC); //messageCC 추가
             } else if (!isUser && isFollowUp) {
-                messageDiv.style.marginLeft = '52px';
+            	const botMessages = chatView.querySelectorAll('.message.bot-message');
+                messageDiv = botMessages[botMessages.length - 1];
+                messageCC = messageDiv.querySelector('.message-content-container');
             }
             
             const messageContent = document.createElement('div');
             messageContent.className = 'message-content';
             messageContent.textContent = content;
+            
+          //유저와 봇 구분
+            if (isUser){
+                messageDiv.appendChild(messageContent);
+            } else {
+                messageCC.appendChild(messageContent);
+            }
             messageDiv.appendChild(messageContent);
             
             chatView.appendChild(messageDiv);
