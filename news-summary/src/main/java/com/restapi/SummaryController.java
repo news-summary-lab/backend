@@ -6,6 +6,7 @@ import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -43,13 +44,19 @@ public class SummaryController {
         return ResponseEntity.ok(summaryService.getConversationHistory(userid));
     }
     
-	
-	@GetMapping("/userinfo") 
-	public ResponseEntity<?> getUserInfo() { User
-		user = userService.authen(); // 로그인 했을 경우 user 반환 if (user == null) return
-		ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message",
-				"guest"));
-	 
-		return ResponseEntity.ok(Map.of( "id", user.getId(), "email",
-				user.getEmail(), "name", user.getName() )); }
+    @PreAuthorize("!authentication.principal.equals('anonymousUser')")
+    @GetMapping("/userinfo")
+    public ResponseEntity<?> getUserInfo() {
+        User user = userService.authen();
+        System.out.println(user);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "guest"));
+        }
+
+        return ResponseEntity.ok(Map.of(
+            "id", user.getId(),
+            "email", user.getEmail(),
+            "name", user.getName()
+        ));
+    }
 }

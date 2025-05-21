@@ -45,8 +45,15 @@ public class UserService implements UserDetailsService{
 	
 	public User authen() {
 		Authentication authentication=SecurityContextHolder.getContext().getAuthentication();
+
+		/*
+		 * System.out.println("인증 객체: " + authentication);
+		 * System.out.println("Principal: " + authentication.getPrincipal());
+		 * System.out.println("isAuthenticated: " + authentication.isAuthenticated());
+		 */
 		
-		if (authentication == null || !authentication.isAuthenticated()) {
+		if (authentication == null || !authentication.isAuthenticated() 
+				|| authentication.getPrincipal().equals("anonymousUser")) {
 	        return null;
 	    }
 		Object principal = authentication.getPrincipal();

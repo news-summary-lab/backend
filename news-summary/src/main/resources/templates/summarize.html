@@ -804,10 +804,10 @@
         async function isLoggedIn() {
             try {
                 const res = await fetch('/api/summaries/userinfo');
-                if (!res.ok) return false;
-                const data = await res.json();
-                return !!data.id;
+                console.log("로그인 상태 확인 응답 코드:", res.status); 
+                return res.ok; // 200이면 로그인 상태, 401이면 비로그인
             } catch {
+            	console.error("로그인 상태 확인 중 오류:", err);
                 return false;
             }
         }
