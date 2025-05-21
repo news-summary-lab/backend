@@ -43,13 +43,13 @@ public class SummaryController {
         return ResponseEntity.ok(summaryService.getConversationHistory(userid));
     }
     
-	/*
-	 * @GetMapping("/api/userinfo") public ResponseEntity<?> getUserInfo() { User
-	 * user = userService.authen(); // 로그인 했을 경우 user 반환 if (user == null) return
-	 * ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message",
-	 * "guest"));
-	 * 
-	 * return ResponseEntity.ok(Map.of( "id", user.getId(), "email",
-	 * user.getEmail(), "name", user.getName() )); }
-	 */
+	
+	@GetMapping("/userinfo") 
+	public ResponseEntity<?> getUserInfo() { User
+		user = userService.authen(); // 로그인 했을 경우 user 반환 if (user == null) return
+		ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message",
+				"guest"));
+	 
+		return ResponseEntity.ok(Map.of( "id", user.getId(), "email",
+				user.getEmail(), "name", user.getName() )); }
 }

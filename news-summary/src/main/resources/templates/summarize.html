@@ -761,8 +761,8 @@
                
                 conversation.push({ prompt: articleText, response: data.summary });
                 
-                if (!isLoggedIn()) {
-                      localStorage.setItem("guestConversation", JSON.stringify(conversation));
+                if (!(await isLoggedIn())) {
+                    localStorage.setItem("guestConversation", JSON.stringify(conversation));
                 }
 
                 let summary = data.summary;
@@ -800,15 +800,17 @@
                 addMessage(false, entry.response);
             });
         }
-        
 
-        function isLoggedIn() {
-          // 서버에서 사용자 정보를 가져오는 API가 있다면 그 결과를 기반으로 판단
-          // 예: /api/userinfo 호출 결과가 guest가 아니면 로그인 상태
-          const userInfo = localStorage.getItem("userInfo");
-          return userInfo && JSON.parse(userInfo).id;
+        async function isLoggedIn() {
+            try {
+                const res = await fetch('/api/summaries/userinfo');
+                if (!res.ok) return false;
+                const data = await res.json();
+                return !!data.id;
+            } catch {
+                return false;
+            }
         }
-
     </script>
 </body>
 </html>
