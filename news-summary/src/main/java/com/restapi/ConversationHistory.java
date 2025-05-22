@@ -1,31 +1,29 @@
 package com.restapi;
 
-import java.util.List;
-
-import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
+import jakarta.persistence.ManyToOne;
 import lombok.Data;
 import lombok.ToString;
 
 @Data
 @Entity
-public class User {
+public class ConversationHistory {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Integer id;
 	
-	private String name;
+	@Column(length = 5000)
+	private String prompt;
 	
-	private String email;
+	@Column(length = 5000)
+	private String response;
 	
-	private String password;
-	
-	@OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE) 
+	@ManyToOne
 	@ToString.Exclude
-    private List<ConversationHistory> conversationList;
+	private User user;
 }

@@ -59,4 +59,13 @@ public class SummaryController {
             "name", user.getName()
         ));
     }
+    @GetMapping("/history/backup")
+    public ResponseEntity<List<ConversationHistory>> getBackupHistory(){
+    	User user=this.userService.authen();
+    	if(user==null) {
+    		return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(List.of());
+    	}
+    	System.out.println(summaryService.getConversationHistoryFromDatabase(user.getId()));
+    	return ResponseEntity.ok(summaryService.getConversationHistoryFromDatabase(user.getId()));
+    }
 }

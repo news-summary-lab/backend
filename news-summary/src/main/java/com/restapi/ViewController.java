@@ -13,4 +13,8 @@ public class ViewController {
     public String test() {
     	return "test";
     }
+    @GetMapping("/history")
+    public String history() {
+    	return "history";
+    }
 }
