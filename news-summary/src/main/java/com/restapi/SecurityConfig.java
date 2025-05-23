@@ -22,15 +22,18 @@ public class SecurityConfig {
 	@Bean
 	SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 	    http
+	    	.csrf(csrf -> csrf
+	    		.ignoringRequestMatchers("/api/summaries/end-session") // ✅ 여기에 추가
+	    	)
 	        .authorizeHttpRequests((authorizeHttpRequests) -> authorizeHttpRequests
 	            .requestMatchers(new AntPathRequestMatcher("/**")).permitAll())
 	        .formLogin((formLogin) -> formLogin
 	            .loginPage("/login_signin")
 	            .usernameParameter("email")
-	            .defaultSuccessUrl("/summarize", true))
+	            .defaultSuccessUrl("/history", true))
 	        .logout((logout) -> logout
 	            .logoutRequestMatcher(new AntPathRequestMatcher("/logout"))
-	            .logoutSuccessUrl("/summarize")
+	            .logoutSuccessUrl("/history")
 	            .invalidateHttpSession(true))
 	        .exceptionHandling((exceptions) -> exceptions
 	            .authenticationEntryPoint((request, response, authException) -> {

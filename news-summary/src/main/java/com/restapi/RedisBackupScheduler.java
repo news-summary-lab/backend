@@ -12,8 +12,8 @@ public class RedisBackupScheduler {
 	private final SummaryService summaryService;
 	
 	/* @Scheduled(fixedRate = 1000 * 60 * 60 * 48) */
-	@Scheduled(fixedRate = 1000 * 60 * 60 * 48)
+	@Scheduled(fixedRate = 1000 * 60)
 	public void backupRedisData() {
-		summaryService.migrateConversationsToDatabase();
+		/* summaryService.migrateConversationsToDatabase(); */
 	}
 }

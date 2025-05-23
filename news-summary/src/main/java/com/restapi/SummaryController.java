@@ -48,7 +48,6 @@ public class SummaryController {
     @GetMapping("/userinfo")
     public ResponseEntity<?> getUserInfo() {
         User user = userService.authen();
-        System.out.println(user);
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "guest"));
         }
@@ -67,5 +66,14 @@ public class SummaryController {
     	}
     	System.out.println(summaryService.getConversationHistoryFromDatabase(user.getId()));
     	return ResponseEntity.ok(summaryService.getConversationHistoryFromDatabase(user.getId()));
+    }
+    
+    @PostMapping("/end-session")
+    public ResponseEntity<?> endSessionAndSave() {
+        User user = userService.authen();
+        if (user == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+
+        summaryService.flushRedisToDatabase(user.getId());
+        return ResponseEntity.ok().build();
     }
 }
