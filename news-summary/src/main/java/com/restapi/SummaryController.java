@@ -40,6 +40,7 @@ public class SummaryController {
     public ResponseEntity<List<Conversation>> getHistory() {
     	User user = this.userService.authen();
         Integer userid = (user != null) ? user.getId() : null;
+        System.out.println("2222"+summaryService.getConversationHistory(userid));
         
         return ResponseEntity.ok(summaryService.getConversationHistory(userid));
     }
