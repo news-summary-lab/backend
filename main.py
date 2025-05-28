@@ -1,19 +1,20 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
-import requests
+from fastapi.responses import HTMLResponse
+import requests, re, os
 from bs4 import BeautifulSoup
 from newspaper import Article
 import openai
-import os
 from dotenv import load_dotenv
+from typing import Union, Tuple
+import unicodedata
 
 load_dotenv()
 
 NAVER_CLIENT_ID = os.getenv("NAVER_CLIENT_ID")
 NAVER_CLIENT_SECRET = os.getenv("NAVER_CLIENT_SECRET")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
 client = openai.OpenAI(api_key=OPENAI_API_KEY)
 
 app = FastAPI()
@@ -31,18 +32,17 @@ class ArticleRequest(BaseModel):
 def is_url(text: str) -> bool:
     return text.startswith("http")
 
-# ✅ 네이버 뉴스 본문 크롤링
+def extract_url_and_context(text: str) -> Tuple[Union[str, None], str]:
+    url_match = re.search(r'(https?://[^\s]+)', text)
+    url = url_match.group(1) if url_match else None
+    cleaned_text = re.sub(r'https?://[^\s]+', '', text).strip()
+    return url, cleaned_text
+
 def extract_naver_article(url: str) -> str:
-    headers = {
-        'User-Agent': (
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-            'AppleWebKit/537.36 (KHTML, like Gecko) '
-            'Chrome/113.0.0.0 Safari/537.36'
-        )
-    }
+    headers = {'User-Agent': 'Mozilla/5.0'}
     res = requests.get(url, headers=headers, timeout=5)
     if res.status_code == 403:
-        raise ValueError("❌ 네이버에서 접근이 차단되었습니다.")
+        raise ValueError("\u274c 네이버에서 접근이 차단되었습니다.")
     soup = BeautifulSoup(res.text, 'html.parser')
     selectors = ['#dic_area', '#newsct_article', '#newsEndContents', 'div.article_body', 'div#articeBody', 'article']
     for selector in selectors:
@@ -55,54 +55,44 @@ def extract_naver_article(url: str) -> str:
                 return text
     raise ValueError("본문을 자동으로 추출할 수 없습니다.")
 
-# ✅ 일반 뉴스 본문 추출
 def extract_general_article(url: str) -> str:
     article = Article(url, language='ko')
     article.download()
     article.parse()
     return article.text
 
-# ✅ 검색용 키워드 추출
 def extract_search_query(text: str) -> str:
     return " ".join(text.strip().split()[:6])
 
-# ✅ 관련 뉴스 검색
 def search_naver_news(query: str):
     url = "https://openapi.naver.com/v1/search/news.json"
     headers = {
         "X-Naver-Client-Id": NAVER_CLIENT_ID,
         "X-Naver-Client-Secret": NAVER_CLIENT_SECRET
     }
-    params = {
-        "query": query,
-        "display": 3,
-        "sort": "date"
-    }
+    params = {"query": query, "display": 3, "sort": "date"}
     response = requests.get(url, headers=headers, params=params)
     return response.json().get("items", [])
 
-# ✅ GPT 요약 (문맥에 따라 프롬프트 구분)
+def clean_text(text: str) -> str:
+    return ''.join(c for c in text if unicodedata.category(c)[0] != 'C')
+
 def summarize_article(text: str, is_direct_prompt: bool = False) -> str:
     if is_direct_prompt:
-        prompt = f"""
-사용자의 요청에 따라 최근 뉴스나 이슈에 대해 응답해 주세요.
+        return """
+         <p>뉴스 요약 기능은 뉴스 기사 URL을 입력하거나, URL과 함께 궁금한 내용을 덧붙였을 때 이용하실 수 있습니다. 단순히 기사 링크만 입력하면 본문 내용을 자동으로 요약해드리며, 궁금한 점을 함께 작성하면 요약과 함께 해당 관점에서 분석된 정보를 제공해드립니다.</p>
 
-요청 내용: "{text}"
-
-- 자연스러운 대화체
-- 짧고 간결하게 핵심만
-- 마크다운 없이 HTML <p>만 사용
-"""
-    else:
-        prompt = f"""
+        <p>특히 “이유”, “왜”, “배경”, “원인”, “목적”과 같은 표현이 포함된 질문을 함께 입력해주시면, AI가 해당 이슈의 핵심 원인이나 목적에 집중해 분석해드립니다. 뉴스 URL 없이 질문만 입력하는 경우 요약 기능은 작동하지 않습니다.</p>
+        """
+    prompt = f"""
 다음은 뉴스 기사 본문입니다. 이 내용을 한 단락으로 자연스럽게 요약해 주세요.
 
 [뉴스 본문]
 {text}
 
 조건:
-- 딱딱하지 않은 문체
-- 마크다운 대신 HTML 형식으로 줄바꿈 없이 요약만 출력
+- 부드러운 문체, 핵심 위주 요약
+- HTML <p>만 사용
 """
     response = client.chat.completions.create(
         model="gpt-4o",
@@ -110,9 +100,8 @@ def summarize_article(text: str, is_direct_prompt: bool = False) -> str:
         max_tokens=1000,
         temperature=0.7,
     )
-    return response.choices[0].message.content.strip()
+    return clean_text(response.choices[0].message.content.strip())
 
-# ✅ 관련 뉴스 HTML 생성
 def format_related_news_html(related_news: list) -> str:
     if not related_news:
         return "<h3>관련 뉴스</h3><p>관련된 뉴스를 찾을 수 없습니다.</p>"
@@ -125,36 +114,106 @@ def format_related_news_html(related_news: list) -> str:
     result += "</ol>"
     return result
 
-# ✅ 전체 HTML 구성
 def summarize_with_related_news(text: str, related_news: list) -> str:
-    summary = summarize_article(text, is_direct_prompt=False)
+    summary = summarize_article(text)
+    formatted_summary = summary.replace('\n\n', '</p><p>').replace('\n', '<br>')
     related_html = format_related_news_html(related_news)
-    return f"<h2>본문 요약</h2><p>{summary}</p><br>{related_html}"
+    return f"<h2>본문 요약</h2><p>{formatted_summary}</p><br>{related_html}"
 
-# ✅ FastAPI 엔드포인트
-@app.post("/summarize")
+@app.post("/summarize", response_class=HTMLResponse)
 def summarize(article: ArticleRequest):
     try:
         user_input = article.text.strip()
         if not user_input:
             raise HTTPException(status_code=400, detail="입력된 텍스트가 비어 있습니다.")
 
-        if is_url(user_input):
-            # ✅ 뉴스 링크인 경우
-            article_text = extract_naver_article(user_input) if "n.news.naver.com" in user_input else extract_general_article(user_input)
+        url, extra_prompt = extract_url_and_context(user_input)
+
+        if url:
+            article_text = extract_naver_article(url) if "n.news.naver.com" in url else extract_general_article(url)
             if len(article_text) < 30:
-                raise HTTPException(status_code=400, detail="본문 길이가 너무 짧습니다. 30자 이상 필요합니다.")
+                raise HTTPException(status_code=400, detail="본문 길이가 너무 짧습니다.")
             search_query = extract_search_query(article_text)
             related_news = search_naver_news(search_query)
-            return summarize_with_related_news(article_text, related_news)
+
+            if extra_prompt:
+                full_prompt = f"""
+다음 뉴스 기사 본문을 요약하고, 사용자 요청도 반영해 주세요.
+
+[뉴스 본문]
+{article_text}
+
+[사용자 요청]
+{extra_prompt}
+
+조건:
+- 자연스러운 말투, 간결한 요약
+- HTML <p>만 사용
+"""
+                summary = client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[{"role": "user", "content": full_prompt}],
+                    max_tokens=1000,
+                    temperature=0.7,
+                ).choices[0].message.content.strip()
+                summary = clean_text(summary)
+                formatted_summary = summary.replace('\n\n', '</p><p>').replace('\n', '<br>')
+                related_html = format_related_news_html(related_news)
+                return f"<h2>본문 요약</h2><p>{formatted_summary}</p><br>{related_html}"
+            else:
+                return summarize_with_related_news(article_text, related_news)
         else:
-            # ✅ 자유 질문인 경우
-            return summarize_article(user_input, is_direct_prompt=True)
+            summary = summarize_article(user_input, is_direct_prompt=True)
+            formatted_summary = summary.replace('\n\n', '</p><p>').replace('\n', '<br>')
+            return formatted_summary
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# ✅ 로컬 실행
+@app.get("/news")
+def get_news_by_category(category: str = Query(...)):
+    # 카테고리 → 쿼리 매핑
+    query_map = {
+        "정치": "정치",
+        "경제": "경제",
+        "사회": "사회",
+        "국제": "국제",
+        "기술/IT": "기술 OR IT OR 인공지능",
+        "예술": "예술 OR 문화 OR 전시 OR 공연"
+    }
+
+    query = query_map.get(category, category)
+
+    # 네이버 뉴스 검색 API 호출
+    url = "https://openapi.naver.com/v1/search/news.json"
+    headers = {
+        "X-Naver-Client-Id": NAVER_CLIENT_ID,
+        "X-Naver-Client-Secret": NAVER_CLIENT_SECRET
+    }
+    params = {
+        "query": query,
+        "display": 3,
+        "sort": "date"
+    }
+
+    res = requests.get(url, headers=headers, params=params)
+    if res.status_code != 200:
+        raise HTTPException(status_code=500, detail="뉴스 검색 실패")
+
+    raw_items = res.json().get("items", [])
+    
+    # <b> 태그 등 제거하고 필요한 필드만 리턴
+    cleaned_items = []
+    for item in raw_items:
+        cleaned_items.append({
+            "title": item.get("title", "").replace("<b>", "").replace("</b>", ""),
+            "description": item.get("description", "").replace("<b>", "").replace("</b>", ""),
+            "link": item.get("link"),
+            "originallink": item.get("originallink")
+        })
+
+    return cleaned_items
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
